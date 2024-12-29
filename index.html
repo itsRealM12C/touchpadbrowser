@@ -1,0 +1,192 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Touchpad Browser</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    iframe {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      width: 100%;
+      height: calc(100% - 40px);
+      border: none;
+    }
+    #toolbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 40px;
+      background-color: #f0f0f0;
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      z-index: 1000;
+    }
+    #urlInput {
+      flex: 1;
+      height: 30px;
+      padding: 5px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #touchpadArea {
+      position: fixed;
+      bottom: 10px;
+      left: 10px;
+      width: 200px;
+      height: 150px;
+      border: 2px solid black;
+      background-color: #ffffff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    #clicks {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+    }
+    .click-box {
+      width: 30%;
+      text-align: center;
+      border-top: 1px solid black;
+      padding: 2px;
+      font-size: 12px;
+    }
+    #cursor {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      background-image: url('https://miro.medium.com/v2/resize:fit:280/0*oa0XcvM99Y5clDsj.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      pointer-events: none;
+      z-index: 1000;
+    }
+    #scrollLabel {
+      margin-top: 10px;
+      font-size: 14px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <input id="urlInput" type="text" placeholder="Enter URL..." value="https://example.com" />
+  </div>
+  <iframe id="webView" src="https://example.com"></iframe>
+
+  <div id="touchpadArea">
+    <div>Touchpad</div>
+    <div id="clicks">
+      <div class="click-box" id="leftClick">Left Click</div>
+      <div class="click-box" id="rightClick">Right Click</div>
+    </div>
+    <div id="scrollLabel">Scroll</div>
+  </div>
+
+  <div id="cursor"></div>
+
+  <script>
+    const iframe = document.getElementById("webView");
+    const urlInput = document.getElementById("urlInput");
+    const cursor = document.getElementById("cursor");
+    const touchpadArea = document.getElementById("touchpadArea");
+    const leftClick = document.getElementById("leftClick");
+    const rightClick = document.getElementById("rightClick");
+
+    let cursorX = window.innerWidth / 2;
+    let cursorY = window.innerHeight / 2;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Update cursor position
+    function updateCursor(x, y) {
+      cursorX += x;
+      cursorY += y;
+
+      // Prevent the cursor from leaving the screen
+      cursorX = Math.max(0, Math.min(window.innerWidth, cursorX));
+      cursorY = Math.max(0, Math.min(window.innerHeight, cursorY));
+
+      cursor.style.left = `${cursorX}px`;
+      cursor.style.top = `${cursorY}px`;
+    }
+
+    // Touchpad drag to move the cursor
+    let startX, startY;
+
+    touchpadArea.addEventListener("touchstart", (e) => {
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+    });
+
+    touchpadArea.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const deltaX = touch.clientX - startX;
+      const deltaY = touch.clientY - startY;
+
+      updateCursor(deltaX, deltaY);
+
+      startX = touch.clientX;
+      startY = touch.clientY;
+    });
+
+    // Left click functionality
+    leftClick.addEventListener("mousedown", () => {
+      const rect = iframe.getBoundingClientRect();
+      const clickX = cursorX - rect.left;
+      const clickY = cursorY - rect.top;
+
+      iframe.contentWindow.postMessage(
+        { type: "left-click", x: clickX, y: clickY },
+        "*"
+      );
+
+      isDragging = true;
+      dragStartX = clickX;
+      dragStartY = clickY;
+    });
+
+    leftClick.addEventListener("mouseup", () => {
+      isDragging = false;
+    });
+
+    // Right-click functionality
+    rightClick.addEventListener("click", () => {
+      const rect = iframe.getBoundingClientRect();
+      const clickX = cursorX - rect.left;
+      const clickY = cursorY - rect.top;
+
+      iframe.contentWindow.postMessage(
+        { type: "right-click", x: clickX, y: clickY },
+        "*"
+      );
+    });
+
+    // Load new URL
+    urlInput.addEventListener("change", () => {
+      const url = urlInput.value.startsWith("http") ? urlInput.value : `https://${urlInput.value}`;
+      iframe.src = url;
+    });
+
+    // Initialize cursor position
+    cursor.style.left = `${cursorX}px`;
+    cursor.style.top = `${cursorY}px`;
+  </script>
+</body>
+</html>
